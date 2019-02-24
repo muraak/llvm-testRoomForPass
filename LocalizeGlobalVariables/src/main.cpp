@@ -1,38 +1,20 @@
-#include <llvm/IR/Module.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/IRReader/IRReader.h>
-#include <llvm/Support/SourceMgr.h>
-#include <llvm/Transforms/Scalar.h>
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
-#include <llvm/Transforms/Scalar/DCE.h>
-#include <llvm/Transforms/Scalar/ADCE.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/BasicBlock.h>
-#include <llvm/IR/CallingConv.h>
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/GlobalVariable.h>
-#include <llvm/IR/ValueSymbolTable.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/PassManager.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/IR/IRPrintingPasses.h>
-#include <llvm/Support/raw_ostream.h>
-#include <llvm-c/Core.h>
-#include <llvm-c/BitReader.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/raw_ostream.h>
-#include <fstream>
-#include <iostream>
+using namespace llvm;
 
-using namespace llvm; 
+#define ON_MAC
 
-void myTest(Module &M);
+void localizeGlobalVariablesIfPossible(Module &M);
+bool isInlineFunction(Function * F);
 
 int main(int argc, char** argv)
 {
-	llvm::legacy::PassManager PM;
 	static LLVMContext context;
 	SMDiagnostic err;
 
@@ -43,32 +25,77 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	myTest(*M);
+	localizeGlobalVariablesIfPossible(*M);
+
+	// I couldn't use dunm() on Mac because of reference error...
+	// But I found there is another way to execute what dump() does!
+#ifdef ON_WINDOWS
+	M->dump();
+#endif
+#ifdef ON_MAC
+	M->print(llvm::errs(), nullptr);
+#endif
+
+	// I haven't try to below codes because of problems same as dump()
+	// Is there any solution?
+#ifdef ON_WINDOWS
+	std::error_code ec;
+	llvm::raw_fd_ostream os("result.bc", ec, llvm::sys::fs::OpenFlags::F_None); 
+	WriteBitcodeToFile(*M, os, false, nullptr, false, nullptr);
+#endif
 
 	return 0;
 }
 
-void myTest(Module &M) {
+void localizeGlobalVariablesIfPossible(Module &M) {
 
 	//find global variables
 	for (auto &G : M.getGlobalList()) {
-		
-		errs() << "Global: " << G.getName() << "\n";
-		errs() << "Used in following functions: " << "\n";
+
+		bool can_localize = true;
+		Function *F_refs_G = NULL;
 
 		for (auto U : G.users()) {
 			if (auto I = dyn_cast<Instruction>(U)) {
-				// FIXME!!: WE need to traverse until Function appers as Parent!
-				if (auto F = dyn_cast<Function>(I->getParent()->getParent())) {
-										
-					for (auto A : F->getAttributes()) {
-						if (!A.hasAttribute(Attribute::AlwaysInline)) {
-							errs() << F->getName() << "\n";
+				
+				if (Function *F = I->getFunction()) {
+
+					if(isInlineFunction(F) == false) {
+						if(F_refs_G == NULL) {
+							F_refs_G = F;
+						}
+						else {
+							if(F->getGUID() != F_refs_G->getGUID()) {
+								can_localize = false;
+								errs() << "break!\n";
+								break;
+							}
 						}
 					}
 				}
-				
+			}
+		}
+
+		if(can_localize && F_refs_G != NULL) {
+			outs() << "Global Variable " << G.getName() << " can be localized into " 
+				<< F_refs_G->getName() << "()\n";
+
+			for(auto &BB : *F_refs_G) {
+				// insert substitute local value into the begining of belonging function
+				IRBuilder<> Builder(&BB.getInstList().front()); // CHECK: Is that right way?
+				auto ins = Builder.CreateAlloca(G.getType(), 0, "t");
+				// replace G to substitute local value
+				G.replaceAllUsesWith(ins);
 			}
 		}
 	}
+}
+
+bool isInlineFunction(Function * F) {
+	for (auto A : F->getAttributes()) {
+		if (A.hasAttribute(Attribute::AlwaysInline)) {
+			return true;
+		}
+	}
+	return false;
 }

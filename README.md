@@ -1,6 +1,6 @@
 # LLVMのPASSのテストプロジェクト
 
-## 単一の関数にインライン化されることでローカル変数化できるグローバル変数を見つけてローカル化する
+## 単一の関数のみからアクセスされるグローバル変数を見つけてローカル化する
 
 ### 準備
 ---
@@ -27,12 +27,13 @@ void incA() {
 #### リンク・インライン済みのllvmビットコードを生成する
 
 すこしやっかいで以下のコマンド手順が必要：
+（最適化レベルを1にしないと全部インライン化されたり全部されなかったりする)
 
-- `clang -c -emit-llvm main.c ope.c`
+- `clang -c -emit-llvm main.c ope.c -O1`
 
 - `llvm-link main.bc ope.bc -o out.bc`
 
-- `opt out.bc -o out.bc -O3` <==ここで外部ファイルのインライン関数が展開される
+- `opt out.bc -o out.bc -O1` <==ここで外部ファイルのインライン関数が展開される
 
 
 最後に生成した`out.bc`が今回の実験のインプットです！
@@ -53,13 +54,13 @@ FOREACH G in モジュール内のグローバル変数
         
         CAN_LOCALIZE := true // Gがローカル化できるかどうか
         
-        F := Userをトラバースして所属する関数を代入()
+        F := Userが所属する関数を代入
 
         IF Fがインライン関数でない　THEN
             IF 初回 THEN
-                G_REFBY := F
+                F_REFS_G := F
             ELSE
-                IF(G_REFBY == F) THEN
+                IF(F_REFS_G == F) THEN
                     CONTINUE
                 ELSE
                     CAN_LOCALIZE = FALSE
@@ -69,10 +70,10 @@ FOREACH G in モジュール内のグローバル変数
         END_IF
     END_FOREACH
 
-    // グローバル変数を関数G_REFBYのローカル変数にする(G_REFBY以外から参照されていないので)
+    // グローバル変数を関数F_REFS_Gのローカル変数にする(F_REFS_G以外から参照されていないので)
     IF CAN_LOCALIZE == true THEN
         モジュールからグローバル変数Gを削除(G_oldに退避)
-        関数G_REFBY内に変数Gを追加(G_oldと同じ型情報)
+        関数F_REFS_G内に変数Gを追加(G_oldと同じ型情報)
         G_oldのusersに対し，G_oldへのUseをGへのUseに更新
     END_IF
 END_FOREACH
@@ -83,7 +84,39 @@ END_FOREACH
 
 グローバル変数の数$N$，各グローバル変数の参照箇所数$M_i$に依存して$O(2N\overline{M})$となる。
 
+### 結果
 
+グローバル変数`@gA`はインライン化により`main()`のみから呼び出されているので
+ローカル変数`%t`に置き換わっている！
+
+- 適用前
+
+```
+define i32 @main() local_unnamed_addr #0 {
+  %1 = load i32, i32* @gA, align 4, !tbaa !3
+  %2 = add nsw i32 %1, 1
+  store i32 %2, i32* @gA, align 4, !tbaa !3
+  ret i32 0
+}
+```
+
+- 適用後
+
+```
+define i32 @main() local_unnamed_addr #0 {
+  %t = alloca i32*
+  %1 = load i32, i32** %t, align 4, !tbaa !3
+  %2 = add nsw i32 %1, 1
+  store i32 %2, i32** %t, align 4, !tbaa !3
+  ret i32 0
+}
+```
+
+## 備考
+
+- Macだとdump()とかllvmライブラリの出力系関数がコンパイルエラーになる。なんで？
+
+- 関数の先頭に命令を追加したい時の方法がいまいちよくわからん。
 
 Happy llvm!<br/>
 Muraak.
