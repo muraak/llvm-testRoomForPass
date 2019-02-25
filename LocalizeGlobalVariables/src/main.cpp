@@ -29,12 +29,12 @@ int main(int argc, char** argv)
 
 	// I couldn't use dunm() on Mac because of reference error...
 	// But I found there is another way to execute what dump() does!
-#ifdef ON_WINDOWS
-	M->dump();
-#endif
-#ifdef ON_MAC
-	M->print(llvm::errs(), nullptr);
-#endif
+// #ifdef ON_WINDOWS
+// 	M->dump();
+// #endif
+// #ifdef ON_MAC
+// 	M->print(llvm::errs(), nullptr);
+// #endif
 
 	// I haven't try to below codes because of problems same as dump()
 	// Is there any solution?
@@ -87,6 +87,9 @@ void localizeGlobalVariablesIfPossible(Module &M) {
 				// replace G to substitute local value
 				G.replaceAllUsesWith(ins);
 			}
+		}
+		else {
+			outs() << "Global Variable " << G.getName() << " can't be localized.\n";
 		}
 	}
 }

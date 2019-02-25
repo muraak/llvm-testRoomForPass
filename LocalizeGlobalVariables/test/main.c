@@ -1,20 +1,25 @@
+#include <stdio.h>
 #include "ope.h"
 
-int gA = 0;
-// int gB = 0;
 
-// void refA();
+void testCase01();
+
+int gA = 0;
 
 
 int main(void) {
-    incA();
-    // refA();
+    
+    testCase01();
+
+    return 0;
 }
 
-// void refA() {
-//     int tmp = gA;
-//     gB = tmp++;
-//     gA++;
-//     return;
-// }
+void testCase01() {
+    
+    incA();
+    readA();
+    refIncA();
+
+    printf("gA is: %d\n", gA);
+}
 
