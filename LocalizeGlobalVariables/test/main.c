@@ -1,4 +1,4 @@
-#include <stdio.h>
+//#include <stdio.h>
 #include "ope.h"
 
 
@@ -20,6 +20,6 @@ void testCase01() {
     readA();
     refIncA();
 
-    printf("gA is: %d\n", gA);
+    //printf("gA is: %d\n", gA);
 }
 
