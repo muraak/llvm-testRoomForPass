@@ -10,9 +10,11 @@
 
 using namespace llvm;
 
-static class LocalizeGlobalVariableInSingleFunction {
+class LocalizeGlobalVariableInSingleFunctionPass : public ModulePass {
 public:
-	static void RunOnModule(Module &M);
+	static char ID;
+	LocalizeGlobalVariableInSingleFunctionPass():ModulePass(ID) {}
+	bool runOnModule(Module &M) override;
 
 private:
 	static bool IsInlineFunction(Function * F);

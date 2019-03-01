@@ -35,7 +35,7 @@ endif(APPLE)
 set(CMAKE_CXX_COMPILER "clang++")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
 
-add_executable(main main.cpp LocalizeGlobalVariableInSingleFunction.cpp  LocalizeGlobalVariableInSingleFunction.h)
+add_executable(main main.cpp LocalizeGlobalVariableInSingleFunctionPass.cpp  LocalizeGlobalVariableInSingleFunctionPass.h)
 
 if(MSVC)
     llvm_map_components_to_libnames(llvm_a_libs support core irreader scalaropts bitwriter)

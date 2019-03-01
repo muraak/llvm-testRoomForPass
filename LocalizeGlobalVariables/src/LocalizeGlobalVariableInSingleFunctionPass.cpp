@@ -1,6 +1,10 @@
-#include "LocalizeGlobalVariableInSingleFunction.h"
+#include "LocalizeGlobalVariableInSingleFunctionPass.h"
 
-void LocalizeGlobalVariableInSingleFunction::RunOnModule (Module &M) {
+char LocalizeGlobalVariableInSingleFunctionPass::ID = 0;
+
+bool LocalizeGlobalVariableInSingleFunctionPass::runOnModule (Module &M) {
+
+	bool modified = false;
 
 	//find global variables
 	for (auto &G : M.getGlobalList()) {
@@ -35,8 +39,6 @@ void LocalizeGlobalVariableInSingleFunction::RunOnModule (Module &M) {
 
 			for (auto &BB : *F_refs_G) {
 
-				F_refs_G->dump();
-
 				// insert substitute local value into the begining of belonging function
 				IRBuilder<> Builder(&BB.getInstList().front()); // CHECK: Is that right way?
 				auto ins = Builder.CreateAlloca(G.getValueType(), nullptr, "t");
@@ -49,8 +51,15 @@ void LocalizeGlobalVariableInSingleFunction::RunOnModule (Module &M) {
 					if (auto I = dyn_cast<Instruction>(u)) {
 						if (I->getFunction()->getGUID() == F_refs_G->getGUID()) {
 							u->replaceUsesOfWith(&G, ins);
+							modified |= true;
 						}
 					}
+				}
+
+				if(modified) {
+					outs() << "All uses of global variable '" << G.getName() << "' in function '"
+						<< F_refs_G->getName() << "()' was replaced with local variable '"
+						<< ins->getName() << "'!\n";
 				}
 			}
 		}
@@ -58,9 +67,11 @@ void LocalizeGlobalVariableInSingleFunction::RunOnModule (Module &M) {
 			outs() << "Global Variable " << G.getName() << " can't be localized.\n";
 		}
 	}
+
+	return modified;
 }
 
-bool LocalizeGlobalVariableInSingleFunction::IsInlineFunction(Function * F) {
+bool LocalizeGlobalVariableInSingleFunctionPass::IsInlineFunction(Function * F) {
 	for (auto A : F->getAttributes()) {
 		if (A.hasAttribute(Attribute::AlwaysInline)) {
 			return true;
@@ -69,7 +80,7 @@ bool LocalizeGlobalVariableInSingleFunction::IsInlineFunction(Function * F) {
 	return false;
 }
 
-bool LocalizeGlobalVariableInSingleFunction::IsThereUserInFunction(Function *F, GlobalValue *G) {
+bool LocalizeGlobalVariableInSingleFunctionPass::IsThereUserInFunction(Function *F, GlobalValue *G) {
 
 	for (auto &U : G->uses()) {
 		if (auto I = dyn_cast<Instruction>(U.getUser())) {
