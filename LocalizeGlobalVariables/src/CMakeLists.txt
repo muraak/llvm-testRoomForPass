@@ -38,7 +38,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
 add_executable(main main.cpp LocalizeGlobalVariableInSingleFunctionPass.cpp  LocalizeGlobalVariableInSingleFunctionPass.h)
 
 if(MSVC)
-    llvm_map_components_to_libnames(llvm_a_libs support core irreader scalaropts bitwriter)
+    llvm_map_components_to_libnames(llvm_a_libs support core irreader scalaropts bitwriter ipo)
     target_link_libraries(main ${llvm_a_libs})
 endif(MSVC)
 

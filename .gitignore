@@ -2,3 +2,5 @@
 *.bc
 *.ll
 *.txt
+*.exe
+*.out

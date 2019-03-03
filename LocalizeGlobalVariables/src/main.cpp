@@ -20,6 +20,7 @@ int main(int argc, char** argv)
 	
 	P.runOnModule(*M);
 
+
 	// I couldn't use dump() on Mac because of reference error...
 	// But I found there is another way to execute what dump() does!
  #ifdef ON_WINDOWS
@@ -35,4 +36,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-

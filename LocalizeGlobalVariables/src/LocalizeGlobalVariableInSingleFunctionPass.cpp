@@ -1,3 +1,4 @@
+
 #include "LocalizeGlobalVariableInSingleFunctionPass.h"
 
 char LocalizeGlobalVariableInSingleFunctionPass::ID = 0;
