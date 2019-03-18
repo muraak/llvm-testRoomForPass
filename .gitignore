@@ -1,6 +1,6 @@
 **/build/**
 *.bc
 *.ll
-*.txt
 *.exe
 *.out
+LocalizeGlobalVariables/src/CMakeLists_old.txt
